@@ -1,0 +1,50 @@
+name: Build Android APK
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential libltdl-dev libffi-dev libssl-dev \
+            python3-dev git zip unzip openjdk-17-jdk \
+            autoconf automake libtool pkg-config zlib1g-dev zlib1g
+
+      - name: Install Buildozer
+        run: |
+          pip install --upgrade pip
+          pip install buildozer cython==0.29.33
+
+      - name: Fix Permissions & License
+        run: |
+          # Agar spec file nahi hai toh banao
+          if [ ! -f buildozer.spec ]; then buildozer init; fi
+          # Settings theek karna
+          sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
+          sed -i 's/warn_on_root = 1/warn_on_root = 0/' buildozer.spec
+
+      - name: Build with Buildozer
+        run: |
+          # Ye command APK banayegi
+          yes | buildozer -v android debug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeliveryApp-APK
+          path: bin/*.apk
+          
